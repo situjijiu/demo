@@ -1,4 +1,4 @@
-package service;
+package com.example.mybatis.service;
 
 import org.springframework.stereotype.Service;
 

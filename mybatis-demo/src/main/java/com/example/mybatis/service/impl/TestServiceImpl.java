@@ -1,6 +1,6 @@
-package service.impl;
+package com.example.mybatis.service.impl;
 
-import service.TestService;
+import com.example.mybatis.service.TestService;
 
 /**
  * @author JJBond

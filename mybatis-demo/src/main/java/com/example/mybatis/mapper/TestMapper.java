@@ -1,6 +1,7 @@
-package mapper;
+package com.example.mybatis.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 /**
@@ -10,6 +11,5 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface TestMapper {
 
-    @Select("select * from user where id = #{id}")
-    String selectUserById(Integer id);
+    String selectUserById(@Param("id") Integer id);
 }
