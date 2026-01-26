@@ -1,5 +1,7 @@
 package com.example.mybatis.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.example.mybatis.model.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -8,8 +10,7 @@ import org.apache.ibatis.annotations.Select;
  * @author JJBond
  * @date 2025-10-30 21:59
  */
-@Mapper
-public interface TestMapper {
+public interface TestMapper extends BaseMapper<User> {
 
-    String selectUserById(@Param("id") Integer id);
+    User selectUserById(@Param("id") Integer id);
 }
