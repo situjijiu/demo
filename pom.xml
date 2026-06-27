@@ -19,6 +19,7 @@
 
     <modules>
         <module>mybatis-demo</module>
+        <module>Java8-demo</module>
     </modules>
 
     <properties>
