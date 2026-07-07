@@ -1,0 +1,72 @@
+# 编译输出
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEA IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.idea_modules/
+out/
+
+# Eclipse
+.settings/
+.classpath
+.project
+.metadata
+.recommenders/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# 日志文件
+logs/
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+*.cache
+
+# 操作系统
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 配置文件（敏感信息）
+application-local.yml
+application-local.yaml
+application-local.properties
+
+# 其他
+*.pid
+*.seed
+*.pid.lock
