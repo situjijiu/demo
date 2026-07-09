@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暖言 · 即时聊天</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ========== CSS 变量 — 温暖极简色板 ========== */
+        :root {
+            --bg: #f5f2ed;
+            --surface: #ffffff;
+            --surface-hover: #faf8f5;
+            --border: #e8e4df;
+            --border-focus: #2a5f6e;
+            --primary: #2a5f6e;
+            --primary-dark: #1e4551;
+            --primary-light: #e8f0f2;
+            --accent: #d4735a;
+            --accent-light: #fdf0ec;
+            --text-primary: #1a1a2e;
+            --text-secondary: #8b8b9e;
+            --text-tertiary: #b0adb8;
+            --bubble-mine-bg: #2a5f6e;
+            --bubble-mine-text: #ffffff;
+            --bubble-other-bg: #eeebe7;
+            --bubble-other-text: #1a1a2e;
+            --system-bg: #e8e4de;
+            --system-text: #6b6b7b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --font-display: 'DM Sans', 'Noto Sans SC', sans-serif;
+            --font-body: 'Noto Sans SC', 'DM Sans', sans-serif;
+            --header-height: 64px;
+            --input-height: 72px;
+        }
+
+        /* ========== 全局重置 ========== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ========== 布局 ========== */
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 16px;
+            position: relative;
+        }
+
+        /* ========== 顶部导航 ========== */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: var(--header-height);
+            padding: 0 4px;
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: var(--font-display);
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--text-primary);
+        }
+
+        .header-title span {
+            color: var(--text-tertiary);
+            font-weight: 400;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ========== 连接配置栏 ========== */
+        .connect-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 0;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        .connect-bar .input-wrap {
+            flex: 1;
+            min-width: 120px;
+            position: relative;
+        }
+
+        .connect-bar input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: 13px;
+            color: var(--text-primary);
+            background: var(--surface);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .connect-bar input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .connect-bar input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(42, 95, 110, 0.1);
+        }
+
+        .connect-bar input:disabled {
+            background: var(--surface-hover);
+            color: var(--text-tertiary);
+            cursor: not-allowed;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1.5px solid var(--border);
+        }
+        .btn-outline:hover:not(:disabled) {
+            border-color: var(--text-tertiary);
+            color: var(--text-primary);
+            background: var(--surface-hover);
+        }
+
+        .btn-danger {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: #c05f48;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-tertiary);
+            padding: 8px;
+        }
+        .btn-ghost:hover:not(:disabled) {
+            color: var(--text-secondary);
+            background: var(--surface-hover);
+        }
+
+        /* ========== 状态指示器 ========== */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            background: var(--surface-hover);
+            flex-shrink: 0;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+            transition: background 0.3s, box-shadow 0.3s;
+            flex-shrink: 0;
+        }
+        .status-dot.connected {
+            background: #3aa76d;
+            box-shadow: 0 0 0 3px rgba(58, 167, 109, 0.2);
+        }
+        .status-dot.disconnected {
+            background: #c0c0c0;
+        }
+        .status-dot.reconnecting {
+            background: #e8a838;
+            animation: dotPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(232, 168, 56, 0.2); }
+            50% { opacity: 0.5; box-shadow: 0 0 0 6px rgba(232, 168, 56, 0.05); }
+        }
+
+        .status-label {
+            font-family: var(--font-display);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .status-reconnect {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-left: 4px;
+        }
+
+        .user-badge {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px 4px 8px;
+            border-radius: 20px;
+            background: var(--primary-light);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+        .user-badge.show {
+            display: inline-flex;
+        }
+        .user-badge .avatar-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* ========== 在线用户栏 ========== */
+        .online-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            min-height: 28px;
+        }
+
+        .online-bar .dot-divider {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--text-tertiary);
+            opacity: 0.4;
+        }
+
+        .online-users {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .online-user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 10px 2px 6px;
+            border-radius: 12px;
+            background: var(--primary-light);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--primary);
+            animation: chipIn 0.3s ease;
+        }
+
+        @keyframes chipIn {
+            from {
+                opacity: 0;
+                transform: scale(0.85);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .online-user-chip .mini-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #3aa76d;
+        }
+
+        /* ========== 消息区域 ========== */
+        .messages-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 8px 4px 4px;
+            scroll-behavior: smooth;
+        }
+
+        .messages-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .messages-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+
+        /* ========== 空状态 ========== */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-tertiary);
+            user-select: none;
+        }
+
+        .empty-state .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+            line-height: 1;
+        }
+
+        .empty-state .empty-title {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .empty-state .empty-hint {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            max-width: 240px;
+            line-height: 1.6;
+        }
+
+        /* ========== 消息气泡 ========== */
+        .msg-group {
+            margin-bottom: 6px;
+            animation: msgSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes msgSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            padding: 0 4px;
+            margin-bottom: 4px;
+        }
+
+        .msg-meta .msg-author {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .msg-bubble {
+            display: inline-block;
+            max-width: 75%;
+            padding: 10px 16px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+            position: relative;
+        }
+
+        /* 自己的消息 — 右对齐 */
+        .msg-group.mine {
+            text-align: right;
+        }
+        .msg-group.mine .msg-meta {
+            justify-content: flex-end;
+        }
+        .msg-group.mine .msg-bubble {
+            background: var(--bubble-mine-bg);
+            color: var(--bubble-mine-text);
+            border-bottom-right-radius: 4px;
+            text-align: left;
+        }
+
+        /* 他人消息 — 左对齐 */
+        .msg-group.other {
+            text-align: left;
+        }
+        .msg-group.other .msg-bubble {
+            background: var(--bubble-other-bg);
+            color: var(--bubble-other-text);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* 系统消息 — 居中 */
+        .msg-group.system {
+            text-align: center;
+            padding: 8px 0;
+        }
+        .msg-group.system .msg-bubble {
+            background: var(--system-bg);
+            color: var(--system-text);
+            font-size: 12px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            max-width: 80%;
+        }
+
+        /* ========== 输入区域 ========== */
+        .input-area {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 12px 0 16px;
+            flex-shrink: 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-area .input-wrap {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-area textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
+            font-family: var(--font-body);
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            background: var(--surface);
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            min-height: 44px;
+            max-height: 120px;
+        }
+
+        .input-area textarea::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .input-area textarea:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(42, 95, 110, 0.1);
+        }
+
+        .input-area textarea:disabled {
+            background: var(--surface-hover);
+            color: var(--text-tertiary);
+            cursor: not-allowed;
+        }
+
+        .btn-send {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-md);
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .btn-send:hover:not(:disabled) {
+            background: var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-1px);
+        }
+        .btn-send:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .btn-send:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .btn-send svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .input-hint {
+            display: none;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            padding: 0 4px 4px;
+            flex-shrink: 0;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 600px) {
+            .app {
+                padding: 0 12px;
+            }
+            .connect-bar .input-wrap {
+                min-width: 80px;
+            }
+            .connect-bar input {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            .btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            .header-title {
+                font-size: 15px;
+            }
+            .msg-bubble {
+                max-width: 88%;
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+            .user-badge .avatar-dot {
+                width: 16px;
+                height: 16px;
+                font-size: 9px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .connect-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .connect-bar .status-indicator {
+                align-self: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app" id="app">
+    <!-- ====== 顶部导航 ====== -->
+    <header class="header">
+        <div class="header-brand">
+            <div class="header-logo">♪</div>
+            <h1 class="header-title">暖言 <span>· Warm Chat</span></h1>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-ghost" id="btnClearLog" title="清空消息">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ====== 连接配置栏 ====== -->
+    <div class="connect-bar">
+        <div class="input-wrap">
+            <input type="text" id="inputUsername" placeholder="你的昵称" value="用户A" maxlength="12">
+        </div>
+        <div class="input-wrap" style="flex:1.8">
+            <input type="text" id="inputWsUrl" value="ws://localhost:8080/ws/spring/chat" placeholder="ws://...">
+        </div>
+        <button class="btn btn-primary" id="btnConnect">连接</button>
+        <button class="btn btn-outline" id="btnDisconnect" disabled>断开</button>
+        <div class="status-indicator">
+            <span class="status-dot disconnected" id="statusDot"></span>
+            <span class="status-label" id="statusLabel">未连接</span>
+            <span class="status-reconnect" id="reconnectInfo"></span>
+        </div>
+        <span class="user-badge" id="userBadge">
+            <span class="avatar-dot" id="badgeAvatar">A</span>
+            <span id="badgeName">用户A</span>
+        </span>
+    </div>
+
+    <!-- ====== 在线状态栏 ====== -->
+    <div class="online-bar" id="onlineBar">
+        <span id="onlineCount">0 人在线</span>
+        <span class="dot-divider"></span>
+        <span class="online-users" id="onlineUsers"></span>
+    </div>
+
+    <!-- ====== 消息区域 ====== -->
+    <div class="messages-container" id="messagesContainer">
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">💬</div>
+            <div class="empty-title">开始聊天</div>
+            <div class="empty-hint">输入昵称并连接后，就可以开始发送消息了</div>
+        </div>
+    </div>
+
+    <!-- ====== 输入区域 ====== -->
+    <div class="input-area">
+        <div class="input-wrap">
+            <textarea id="inputMessage" rows="1" placeholder="输入消息…" disabled></textarea>
+        </div>
+        <button class="btn-send" id="btnSend" disabled>
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+    </div>
+    <div class="input-hint" id="inputHint">按 Enter 发送，Shift+Enter 换行</div>
+</div>
+
+<script>
+    // ================================================================
+    //  配置常量
+    // ================================================================
+
+    const HEARTBEAT_INTERVAL = 15000;
+    const HEARTBEAT_TIMEOUT = 20000;
+    const BASE_RECONNECT_DELAY = 1000;
+    const MAX_RECONNECT_DELAY = 30000;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const JITTER_FACTOR = 0.3;
+
+    const MESSAGE_TYPE = {
+        CHAT: 'chat',
+        SYSTEM: 'system'
+    };
+
+    // ================================================================
+    //  状态
+    // ================================================================
+
+    let ws = null;
+    let currentUser = '';
+    let isManualDisconnect = false;
+    let reconnectAttempts = 0;
+    let heartbeatTimer = null;
+    let heartbeatTimeoutTimer = null;
+    let reconnectTimer = null;
+    let onlineUsersSet = new Set();  // 跟踪在线用户
+
+    // ================================================================
+    //  工具函数
+    // ================================================================
+
+    /**
+     * HTML 转义，防止 XSS 攻击
+     * @param {string} text - 原始文本
+     * @returns {string} 转义后的安全文本
+     */
+    function escapeHtml(text) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        return el.innerHTML;
+    }
+
+    /**
+     * 获取当前格式化的时间字符串
+     * @returns {string} 格式化的时间 (HH:mm)
+     */
+    function getTimeStr() {
+        const now = new Date();
+        return String(now.getHours()).padStart(2, '0') + ':' +
+               String(now.getMinutes()).padStart(2, '0');
+    }
+
+    /**
+     * 获取头像缩写字符
+     * @param {string} name - 用户名
+     * @returns {string} 单个字符的缩写
+     */
+    function getAvatarChar(name) {
+        return (name || '?').charAt(0).toUpperCase();
+    }
+
+    // ================================================================
+    //  WebSocket 连接管理
+    // ================================================================
+
+    /**
+     * 构建带用户名的 WebSocket URL
+     * 自动检测端点类型：
+     *   - Spring WebSocket（路径含 /spring/）→ 使用 query 参数: ws://host/path?username=xxx
+     *   - Java WebSocket（其他路径）→ 使用路径参数: ws://host/path/xxx
+     * @returns {string} 完整的 WebSocket 连接地址
+     */
+    function buildWsUrl() {
+        const baseUrl = document.getElementById('inputWsUrl').value.trim().replace(/\/+$/, '');
+        const user = document.getElementById('inputUsername').value.trim() || '匿名用户';
+        currentUser = user;
+
+        // 检测是否为 Spring WebSocket 端点（含 /spring/）
+        if (/\/spring\//.test(baseUrl)) {
+            return baseUrl + '?username=' + encodeURIComponent(user);
+        }
+        return baseUrl + '/' + encodeURIComponent(user);
+    }
+
+    /**
+     * 建立 WebSocket 连接
+     */
+    function connect() {
+        const user = document.getElementById('inputUsername').value.trim();
+        if (!user) {
+            appendSystemMsg('请输入昵称');
+            return;
+        }
+
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+
+        const url = buildWsUrl();
+        onlineUsersSet.clear();
+        updateOnlineBar();
+
+        try {
+            ws = new WebSocket(url);
+            isManualDisconnect = false;
+
+            ws.onopen = function() {
+                reconnectAttempts = 0;
+                setConnectedUI(true);
+                startHeartbeat();
+            };
+
+            ws.onmessage = function(event) {
+                const data = event.data;
+                // 心跳响应
+                if (data === 'pong') {
+                    resetHeartbeatTimeout();
+                    return;
+                }
+                handleMessage(data);
+            };
+
+            ws.onclose = function() {
+                stopHeartbeat();
+                setConnectedUI(false);
+                if (!isManualDisconnect) {
+                    scheduleReconnect();
+                }
+            };
+
+            ws.onerror = function() {
+                // onclose 会紧随其后触发，无需重复处理
+            };
+        } catch (e) {
+            appendSystemMsg('连接失败: ' + e.message);
+            scheduleReconnect();
+        }
+    }
+
+    /**
+     * 主动断开 WebSocket 连接
+     */
+    function disconnect() {
+        isManualDisconnect = true;
+        clearReconnectTimer();
+        stopHeartbeat();
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+        onlineUsersSet.clear();
+        updateOnlineBar();
+    }
+
+    // ================================================================
+    //  心跳检测
+    // ================================================================
+
+    function startHeartbeat() {
+        stopHeartbeat();
+        sendPing();
+        heartbeatTimer = setInterval(sendPing, HEARTBEAT_INTERVAL);
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+        if (heartbeatTimeoutTimer) {
+            clearTimeout(heartbeatTimeoutTimer);
+            heartbeatTimeoutTimer = null;
+        }
+    }
+
+    function sendPing() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send('ping');
+            resetHeartbeatTimeout();
+        }
+    }
+
+    function resetHeartbeatTimeout() {
+        if (heartbeatTimeoutTimer) clearTimeout(heartbeatTimeoutTimer);
+        heartbeatTimeoutTimer = setTimeout(function() {
+            appendSystemMsg('心跳超时，尝试重连…');
+            if (ws) ws.close();
+        }, HEARTBEAT_TIMEOUT);
+    }
+
+    // ================================================================
+    //  重连机制（指数退避 + 随机抖动）
+    // ================================================================
+
+    function scheduleReconnect() {
+        clearReconnectTimer();
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            appendSystemMsg('已达最大重连次数，停止重连');
+            document.getElementById('reconnectInfo').textContent = '';
+            return;
+        }
+        reconnectAttempts++;
+        const delay = calcReconnectDelay(reconnectAttempts);
+        document.getElementById('reconnectInfo').textContent =
+            '重连 ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ' (' + (delay / 1000).toFixed(1) + 's)';
+        reconnectTimer = setTimeout(connect, delay);
+    }
+
+    function calcReconnectDelay(attempt) {
+        const exp = BASE_RECONNECT_DELAY * Math.pow(2, attempt - 1);
+        const capped = Math.min(exp, MAX_RECONNECT_DELAY);
+        const jitter = capped * JITTER_FACTOR * (Math.random() - 0.5);
+        return Math.max(0, Math.round(capped + jitter));
+    }
+
+    function clearReconnectTimer() {
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+    }
+
+    // ================================================================
+    //  消息发送
+    // ================================================================
+
+    /**
+     * 发送聊天消息
+     */
+    function sendMessage() {
+        const input = document.getElementById('inputMessage');
+        const text = input.value.trim();
+        if (!text) return;
+
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            appendSystemMsg('未连接，无法发送');
+            return;
+        }
+
+        const payload = JSON.stringify({
+            type: MESSAGE_TYPE.CHAT,
+            from: currentUser,
+            content: text,
+            time: new Date().toISOString()
+        });
+
+        ws.send(payload);
+        appendBubble(text, 'mine');
+        input.value = '';
+        autoResizeTextarea(input);
+    }
+
+    // ================================================================
+    //  消息处理
+    // ================================================================
+
+    /**
+     * 处理后端推送的原始消息
+     * 后端消息格式: {"type":"chat"|"system","from":"用户名","content":"内容","time":"..."}
+     * @param {string} raw - 原始 JSON 字符串
+     */
+    function handleMessage(raw) {
+        try {
+            const msg = JSON.parse(raw);
+            if (!msg.type || !msg.from) {
+                appendBubble(raw, 'other');
+                return;
+            }
+
+            // 跟踪在线用户（系统消息中的用户是刚进入/离开的）
+            if (msg.type === MESSAGE_TYPE.SYSTEM) {
+                if (msg.content && msg.content.includes('进入了')) {
+                    onlineUsersSet.add(msg.from);
+                } else if (msg.content && msg.content.includes('离开了')) {
+                    onlineUsersSet.delete(msg.from);
+                }
+                updateOnlineBar();
+                appendSystemMsg(msg.from + ' ' + msg.content);
+            } else if (msg.type === MESSAGE_TYPE.CHAT) {
+                // 如果收到的消息来自自己（广播回声），忽略
+                if (msg.from === currentUser) return;
+                // 其他人发言时将其加入在线列表
+                onlineUsersSet.add(msg.from);
+                updateOnlineBar();
+                appendBubble(msg.content, 'other', msg.from);
+            } else {
+                appendBubble(raw, 'other');
+            }
+        } catch (e) {
+            appendBubble(raw, 'other');
+        }
+    }
+
+    /**
+     * 添加聊天气泡到消息列表
+     * @param {string} content - 消息内容
+     * @param {'mine'|'other'} side - 消息方向
+     * @param {string} [author] - 发送者名称
+     */
+    function appendBubble(content, side, author) {
+        removeEmptyState();
+
+        const container = document.getElementById('messagesContainer');
+        const group = document.createElement('div');
+        group.className = 'msg-group ' + side;
+
+        const meta = document.createElement('div');
+        meta.className = 'msg-meta';
+        if (side === 'mine') {
+            meta.innerHTML = '<span class="msg-time">' + getTimeStr() + '</span>';
+        } else {
+            meta.innerHTML = '<span class="msg-author">' + escapeHtml(author || '') + '</span>' +
+                             '<span class="msg-time">' + getTimeStr() + '</span>';
+        }
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.textContent = content;
+
+        group.appendChild(meta);
+        group.appendChild(bubble);
+        container.appendChild(group);
+        scrollToBottom();
+    }
+
+    /**
+     * 添加系统消息
+     * @param {string} text - 系统消息文本
+     */
+    function appendSystemMsg(text) {
+        removeEmptyState();
+
+        const container = document.getElementById('messagesContainer');
+        const group = document.createElement('div');
+        group.className = 'msg-group system';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.textContent = text;
+
+        group.appendChild(bubble);
+        container.appendChild(group);
+        scrollToBottom();
+    }
+
+    /**
+     * 移除空状态占位
+     */
+    function removeEmptyState() {
+        const empty = document.getElementById('emptyState');
+        if (empty) empty.remove();
+    }
+
+    /**
+     * 滚动消息区域到底部
+     */
+    function scrollToBottom() {
+        requestAnimationFrame(function() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        });
+    }
+
+    // ================================================================
+    //  UI 更新
+    // ================================================================
+
+    /**
+     * 切换连接/断开后的 UI 状态
+     * @param {boolean} connected - 是否已连接
+     */
+    function setConnectedUI(connected) {
+        const dot = document.getElementById('statusDot');
+        const label = document.getElementById('statusLabel');
+        const btnConnect = document.getElementById('btnConnect');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const btnSend = document.getElementById('btnSend');
+        const inputMsg = document.getElementById('inputMessage');
+        const inputUser = document.getElementById('inputUsername');
+        const inputUrl = document.getElementById('inputWsUrl');
+        const badge = document.getElementById('userBadge');
+        const hint = document.getElementById('inputHint');
+
+        if (connected) {
+            dot.className = 'status-dot connected';
+            label.textContent = '已连接';
+            btnConnect.disabled = true;
+            btnDisconnect.disabled = false;
+            btnSend.disabled = false;
+            inputMsg.disabled = false;
+            inputUser.disabled = true;
+            inputUrl.disabled = true;
+            document.getElementById('reconnectInfo').textContent = '';
+            badge.className = 'user-badge show';
+            document.getElementById('badgeAvatar').textContent = getAvatarChar(currentUser);
+            document.getElementById('badgeName').textContent = currentUser;
+            hint.style.display = 'block';
+            inputMsg.focus();
+        } else {
+            dot.className = 'status-dot disconnected';
+            label.textContent = '未连接';
+            btnConnect.disabled = false;
+            btnDisconnect.disabled = true;
+            btnSend.disabled = true;
+            inputMsg.disabled = true;
+            inputUser.disabled = false;
+            inputUrl.disabled = false;
+            badge.className = 'user-badge';
+            hint.style.display = 'none';
+        }
+    }
+
+    /**
+     * 更新在线用户栏
+     */
+    function updateOnlineBar() {
+        const countEl = document.getElementById('onlineCount');
+        const usersEl = document.getElementById('onlineUsers');
+        const size = onlineUsersSet.size;
+
+        countEl.textContent = size + ' 人在线';
+
+        let html = '';
+        onlineUsersSet.forEach(function(name) {
+            html += '<span class="online-user-chip">' +
+                    '<span class="mini-dot"></span>' +
+                    escapeHtml(name) +
+                    '</span>';
+        });
+        usersEl.innerHTML = html;
+    }
+
+    /**
+     * 自动调整 textarea 高度
+     */
+    function autoResizeTextarea(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    /**
+     * 清空消息记录
+     */
+    function clearMessages() {
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = '';
+        // 重新插入空状态
+        container.innerHTML = '<div class="empty-state" id="emptyState">' +
+            '<div class="empty-icon">💬</div>' +
+            '<div class="empty-title">开始聊天</div>' +
+            '<div class="empty-hint">输入昵称并连接后，就可以开始发送消息了</div>' +
+            '</div>';
+    }
+
+    // ================================================================
+    //  事件绑定
+    // ================================================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // 连接按钮
+        document.getElementById('btnConnect').addEventListener('click', connect);
+
+        // 断开按钮
+        document.getElementById('btnDisconnect').addEventListener('click', disconnect);
+
+        // 发送按钮
+        document.getElementById('btnSend').addEventListener('click', sendMessage);
+
+        // 清空按钮
+        document.getElementById('btnClearLog').addEventListener('click', clearMessages);
+
+        // 输入框 Enter 发送
+        const textarea = document.getElementById('inputMessage');
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 输入框自动调整高度
+        textarea.addEventListener('input', function() {
+            autoResizeTextarea(this);
+        });
+
+        // 回车键在昵称/URL输入框中触发连接
+        document.getElementById('inputUsername').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') connect();
+        });
+        document.getElementById('inputWsUrl').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') connect();
+        });
+
+        // 如果 URL 输入框变化，自动调整 onlineUsersSet 跟踪
+        // (无需额外处理，但保留扩展空间)
+    });
+</script>
+
+</body>
+</html>
