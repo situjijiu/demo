@@ -404,6 +404,12 @@
         /** 随机抖动范围（0 ~ 1），在退避时间上增加 0~30% 的随机值 */
         const JITTER_FACTOR = 0.3;
 
+        /** 消息类型常量（与后端 Type.java 保持一致） */
+        const MESSAGE_TYPE = {
+            CHAT: 'chat',
+            SYSTEM: 'system'
+        };
+
         // ==================== 全局状态 ====================
 
         /** WebSocket 实例 */
@@ -436,7 +442,6 @@
             const user = document.getElementById('username').value.trim() || '匿名用户';
             currentUser = user;
 
-            // 移除 baseUrl 末尾可能存在的斜杠，然后将用户名作为路径参数追加
             const cleanBaseUrl = baseUrl.replace(/\/$/, '');
             return `${cleanBaseUrl}/${encodeURIComponent(user)}`;
         }
@@ -453,7 +458,6 @@
                 return;
             }
 
-            // 如果已有连接，先清理
             if (ws) {
                 ws.close();
                 ws = null;
@@ -479,7 +483,6 @@
                     badge.textContent = '当前用户: ' + currentUser;
                     badge.style.display = 'inline-block';
 
-                    // 延迟 500ms 启动心跳，确保连接完全建立
                     setTimeout(() => {
                         startHeartbeat();
                     }, 500);
@@ -489,13 +492,11 @@
                     recvCount++;
                     document.getElementById('recvCount').textContent = recvCount;
 
-                    // 收到 pong 响应，重置心跳超时
                     if (event.data === 'pong') {
                         resetHeartbeatTimeout();
                         return;
                     }
 
-                    // 解析后端消息格式
                     parseMessage(event.data);
                 };
 
@@ -504,7 +505,6 @@
                     updateStatus(false);
                     resetUI();
 
-                    // 非手动断开时触发重连
                     if (!isManualDisconnect) {
                         scheduleReconnect();
                     }
@@ -542,12 +542,10 @@
         function startHeartbeat() {
             stopHeartbeat();
 
-            // 立即发送第一次 ping
             setTimeout(() => {
                 sendPing();
             }, 100);
 
-            // 启动定时发送
             heartbeatTimer = setInterval(() => {
                 sendPing();
             }, HEARTBEAT_INTERVAL);
@@ -573,7 +571,6 @@
         function sendPing() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send('ping');
-                // 启动心跳超时检测
                 resetHeartbeatTimeout();
             }
         }
@@ -597,7 +594,6 @@
             addLog('心跳超时，连接可能已断开', 'error');
             if (ws) {
                 ws.close();
-                // ws.onclose 会触发 scheduleReconnect
             }
         }
 
@@ -632,11 +628,8 @@
          * @returns {number} 实际等待毫秒数
          */
         function calculateReconnectDelay(attempt) {
-            // 指数退避：delay = base * 2^(attempt - 1)
             const exponentialDelay = BASE_RECONNECT_DELAY * Math.pow(2, attempt - 1);
-            // 上限限制
             const cappedDelay = Math.min(exponentialDelay, MAX_RECONNECT_DELAY);
-            // 随机抖动：在 [cappedDelay * (1 - jitter/2), cappedDelay * (1 + jitter/2)] 范围内取随机值
             const jitter = cappedDelay * JITTER_FACTOR * (Math.random() - 0.5);
             const finalDelay = Math.max(0, Math.round(cappedDelay + jitter));
             return finalDelay;
@@ -655,7 +648,7 @@
         // ==================== 消息发送 ====================
 
         /**
-         * 发送广播消息
+         * 发送广播消息（使用 JSON 格式）
          */
         function sendMessage() {
             const input = document.getElementById('messageInput');
@@ -671,12 +664,15 @@
                 return;
             }
 
-            // 按照约定格式发送：msg:用户名:消息内容
-            const fullMessage = `msg:${currentUser}:${message}`;
-            ws.send(fullMessage);
+            const chatMessage = {
+                type: MESSAGE_TYPE.CHAT,
+                from: currentUser,
+                content: message,
+                time: new Date().toISOString()
+            };
+            ws.send(JSON.stringify(chatMessage));
             sentCount++;
             document.getElementById('sentCount').textContent = sentCount;
-            // 本地界面只展示消息内容
             addLog(message, 'sent', currentUser);
             input.value = '';
         }
@@ -684,43 +680,34 @@
         // ==================== 消息解析 ====================
 
         /**
-         * 解析后端发来的消息
-         * 格式约定：
-         *   system:join:用户名  → 用户加入
-         *   system:leave:用户名 → 用户离开
-         *   msg:用户名:消息内容 → 普通聊天消息
+         * 解析后端发来的 JSON 消息
+         * 消息格式（与后端 ChatMessage.java 对应）：
+         * {
+         *   "type": "chat" | "system",
+         *   "from": "用户名",
+         *   "content": "消息内容",
+         *   "time": "2024-01-01T12:00:00"
+         * }
          * @param {string} raw - 原始消息字符串
          */
         function parseMessage(raw) {
-            const parts = raw.split(':');
-            if (parts.length < 2) {
-                addLog(raw, 'msg');
-                return;
-            }
+            try {
+                const msg = JSON.parse(raw);
 
-            const prefix = parts[0];
-
-            if (prefix === 'system') {
-                const action = parts[1];
-                // 用户名可能包含冒号，取剩余部分
-                const username = parts.slice(2).join(':');
-                if (action === 'join') {
-                    addLog(`用户「${escapeHtml(username)}」加入广播室`, 'system');
-                } else if (action === 'leave') {
-                    addLog(`用户「${escapeHtml(username)}」离开广播室`, 'system');
-                } else {
-                    addLog(raw, 'system');
+                if (!msg.type || !msg.from) {
+                    addLog(raw, 'msg');
+                    return;
                 }
-            } else if (prefix === 'msg') {
-                if (parts.length >= 3) {
-                    const fromUser = parts[1];
-                    const content = parts.slice(2).join(':');
-                    addLog(content, 'msg', fromUser);
+
+                if (msg.type === MESSAGE_TYPE.SYSTEM) {
+                    addLog(`用户「${escapeHtml(msg.from)}」${escapeHtml(msg.content)}`, 'system', msg.from);
+                } else if (msg.type === MESSAGE_TYPE.CHAT) {
+                    addLog(msg.content, 'msg', msg.from);
                 } else {
                     addLog(raw, 'msg');
                 }
-            } else {
-                // 无法识别的格式，按普通消息展示
+            } catch (e) {
+                console.error('消息解析失败:', e);
                 addLog(raw, 'msg');
             }
         }
@@ -736,20 +723,24 @@
         function addLog(content, type, fromUser) {
             const logContainer = document.getElementById('messageLog');
 
-            // 移除空状态提示
             const emptyState = logContainer.querySelector('.empty-state');
             if (emptyState) {
                 emptyState.remove();
             }
 
             const item = document.createElement('div');
-            const time = new Date().toLocaleTimeString('zh-CN');
+            const time = new Date().toLocaleString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
 
             let typeLabel;
             let displayType = type;
 
             if (type === 'msg') {
-                // 判断是不是自己发的消息
                 if (fromUser === currentUser) {
                     typeLabel = '📤 我';
                     displayType = 'sent';
@@ -843,7 +834,6 @@
             return div.innerHTML;
         }
 
-        // 支持回车发送
         document.getElementById('messageInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

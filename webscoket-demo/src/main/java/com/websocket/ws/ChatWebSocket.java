@@ -2,12 +2,18 @@ package com.websocket.ws;
 
 
 import cn.hutool.core.util.StrUtil;
+
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+
+import cn.hutool.json.JSONUtil;
+import com.websocket.enums.Type;
+import com.websocket.model.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,7 +27,12 @@ public class ChatWebSocket {
 
     @OnOpen
     public void onOpen(Session session, @PathParam("username") String username) {
-        String format = StrUtil.format("system:join:{}", username);
+        ChatMessage msg = ChatMessage.builder()
+                .type(Type.SYSTEM)
+                .from(username)
+                .content("进入了聊天室")
+                .time(LocalDateTime.now()).build();
+        String format = JSONUtil.toJsonStr(msg);
         log.info(format);
         onlineSessions.put(username, session);
         session.getAsyncRemote().sendText(format);
@@ -38,15 +49,38 @@ public class ChatWebSocket {
             });
             return;
         }
-        String format = StrUtil.format("msg:{}:{}", username, message);
-        log.info(format);
-        broadcast(format, session);
+
+        try {
+            cn.hutool.json.JSONObject jsonObj = JSONUtil.parseObj(message);
+            String msgType = jsonObj.getStr("type");
+            String content = jsonObj.getStr("content");
+
+            ChatMessage chatMessage = ChatMessage.builder()
+                    .type(msgType != null ? msgType : Type.CHAT)
+                    .from(username)
+                    .content(content != null ? content : "")
+                    .time(LocalDateTime.now()).build();
+            log.info(JSONUtil.toJsonPrettyStr(chatMessage));
+            broadcast(chatMessage, session);
+        } catch (Exception e) {
+            log.error("消息解析失败: {}", e.getMessage());
+            ChatMessage chatMessage = ChatMessage.builder()
+                    .type(Type.CHAT)
+                    .from(username)
+                    .content(message)
+                    .time(LocalDateTime.now()).build();
+            broadcast(chatMessage, session);
+        }
     }
 
     @OnClose
     public void onClose(Session session, @PathParam("username") String username) {
-        String format = StrUtil.format("system:leave:{}", username);
-        log.info(format);
+        ChatMessage format = ChatMessage.builder()
+                .type(Type.SYSTEM)
+                .from(username)
+                .content("离开了聊天室")
+                .time(LocalDateTime.now()).build();
+        log.info(JSONUtil.toJsonPrettyStr(format));
         onlineSessions.remove(username);
     }
 
@@ -71,6 +105,19 @@ public class ChatWebSocket {
         onlineSessions.forEach((username, onlineSession) -> {
             if (onlineSession.isOpen() && !Objects.equals(onlineSession, session)) {
                 onlineSession.getAsyncRemote().sendText(msg, result -> {
+                    if (!result.isOK()) {
+                        log.error("发送失败：{}", result.getException().getMessage());
+                    }
+                });
+            }
+        });
+    }
+
+    private static void broadcast(Object message, Session session) {
+        String jsonStr = JSONUtil.toJsonStr(message);
+        onlineSessions.forEach((username, onlineSession) -> {
+            if (onlineSession.isOpen() && !Objects.equals(onlineSession, session)) {
+                onlineSession.getAsyncRemote().sendText(jsonStr, result -> {
                     if (!result.isOK()) {
                         log.error("发送失败：{}", result.getException().getMessage());
                     }
