@@ -1,29 +1,31 @@
 package com.websocket.config;
 
 import com.websocket.ws.SpringChatWebSocketHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurationSupport;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.net.URI;
 import java.util.Map;
 
 /**
- * WebSocket 配置类，注册 Handler 和握手拦截器
+ * WebSocket 配置类，注册 Handler、握手拦截器和心跳装饰器工厂
  */
 @Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
+@RequiredArgsConstructor
+public class WebSocketConfig extends WebSocketConfigurationSupport {
+
+    private final SpringChatWebSocketHandler springChatWebSocketHandler;
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-
-        registry.addHandler(new SpringChatWebSocketHandler(), "/ws/spring/chat")
+    protected void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(springChatWebSocketHandler, "/ws/spring/chat")
                 .addInterceptors(new UsernameHandshakeInterceptor())
                 .setAllowedOrigins("*");
     }
@@ -40,7 +42,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
             URI uri = request.getURI();
             String query = uri.getQuery();
             if (query != null) {
-                // 解析 username 参数
                 String[] params = query.split("&");
                 for (String param : params) {
                     String[] kv = param.split("=", 2);
@@ -50,7 +51,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
                     }
                 }
             }
-            // 未提供 username 时使用默认值，允许连接继续
             attributes.put("username", "匿名用户");
             return true;
         }
@@ -58,7 +58,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
         @Override
         public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Exception exception) {
-            // 握手的后置处理，留空即可
         }
     }
 }
