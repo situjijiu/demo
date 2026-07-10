@@ -1,6 +1,8 @@
 package com.websocket.ws;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -16,8 +18,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SpringChatWebSocketHandler extends TextWebSocketHandler {
 
+    private final ApplicationEventPublisher publisher;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     @Override
@@ -28,6 +32,7 @@ public class SpringChatWebSocketHandler extends TextWebSocketHandler {
             log.warn("用户名未设置，使用降级标识：{}", username);
         }
         sessions.put(username, session);
+        publisher.publishEvent(username + "已登录聊天室");
         log.info("{} 连接成功", username);
     }
 
