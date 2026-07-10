@@ -28,8 +28,7 @@ public class ChatWebSocket {
     @OnOpen
     public void onOpen(Session session, @PathParam("username") String username) {
         ChatMessage msg = ChatMessage.builder()
-                .type(Type.SYSTEM)
-                .from(username)
+                .sender(username)
                 .content("进入了聊天室")
                 .time(LocalDateTime.now()).build();
         String format = JSONUtil.toJsonStr(msg);
@@ -56,8 +55,7 @@ public class ChatWebSocket {
             String content = jsonObj.getStr("content");
 
             ChatMessage chatMessage = ChatMessage.builder()
-                    .type(msgType != null ? msgType : Type.CHAT)
-                    .from(username)
+                    .sender(username)
                     .content(content != null ? content : "")
                     .time(LocalDateTime.now()).build();
             log.info(JSONUtil.toJsonPrettyStr(chatMessage));
@@ -65,8 +63,7 @@ public class ChatWebSocket {
         } catch (Exception e) {
             log.error("消息解析失败: {}", e.getMessage());
             ChatMessage chatMessage = ChatMessage.builder()
-                    .type(Type.CHAT)
-                    .from(username)
+                    .sender(username)
                     .content(message)
                     .time(LocalDateTime.now()).build();
             broadcast(chatMessage, session);
@@ -76,8 +73,7 @@ public class ChatWebSocket {
     @OnClose
     public void onClose(Session session, @PathParam("username") String username) {
         ChatMessage format = ChatMessage.builder()
-                .type(Type.SYSTEM)
-                .from(username)
+                .sender(username)
                 .content("离开了聊天室")
                 .time(LocalDateTime.now()).build();
         log.info(JSONUtil.toJsonPrettyStr(format));

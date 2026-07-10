@@ -31,14 +31,9 @@ public class SpringChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
+        String username = session.getAttributes().get("username").toString();
 
-        // 心跳检测：收到 ping 直接回复 pong，不广播
-        if ("ping".equals(payload)) {
-            if (session.isOpen()) {
-                session.sendMessage(new TextMessage("pong"));
-            }
-            return;
-        }
+        log.info("{}发送消息：{}", username, payload);
 
         // 广播给所有在线用户（排除发送者自身）
         for (WebSocketSession s : sessions.values()) {
