@@ -21,6 +21,7 @@
         <module>mybatis-demo</module>
         <module>Java8-demo</module>
         <module>webscoket-demo</module>
+        <module>STOMP-demo</module>
     </modules>
 
     <properties>
