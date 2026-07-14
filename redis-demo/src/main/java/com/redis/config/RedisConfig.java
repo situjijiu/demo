@@ -7,6 +7,9 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.redis.listener.CacheEvictListener;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,10 +17,13 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Duration;
 
@@ -28,6 +34,7 @@ import java.time.Duration;
  */
 @Configuration
 @EnableCaching
+@RequiredArgsConstructor
 public class RedisConfig {
 
     /**
@@ -73,7 +80,7 @@ public class RedisConfig {
         objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .computePrefixWith(cacheName -> "demo:")
+                .computePrefixWith(cacheName -> "demo:" + cacheName)
                 .entryTtl((key, value) -> Duration.ofMinutes(ThreadLocalRandom.current().nextInt(3, 10)))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.json()));
@@ -81,5 +88,26 @@ public class RedisConfig {
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(config)
                 .build();
+    }
+
+
+    public final CacheEvictListener cacheEvictListener;
+
+    @Bean
+    public RedisMessageListenerContainer container(RedisConnectionFactory factory) {
+
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(factory);
+
+        // 配置消息分发的线程池
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setThreadNamePrefix("redis-pubsub-");
+        executor.initialize();
+        container.setTaskExecutor(executor);
+
+        container.addMessageListener(cacheEvictListener, ChannelTopic.of("cache:evict"));
+        return container;
     }
 }
