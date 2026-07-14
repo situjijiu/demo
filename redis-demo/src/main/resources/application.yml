@@ -1,0 +1,29 @@
+spring:
+  # 缓存配置 - 用于防止缓存雪崩的随机 TTL
+  cache:
+    base-ttl-minutes: 10
+    max-random-delta-minutes: 5
+
+  # Redis 配置
+  data:
+    redis:
+      # Redis 服务器地址
+      host: 192.168.42.143
+      # Redis 服务器端口
+      port: 6379
+      # Redis 服务器密码（默认为空）
+      password: redis
+      # 连接超时时间（毫秒）
+      timeout: 3000ms
+
+      # Lettuce 连接池配置
+      lettuce:
+        pool:
+          # 最大活跃连接数
+          max-active: 8
+          # 最大空闲连接数
+          max-idle: 8
+          # 最小空闲连接数
+          min-idle: 0
+          # 最大阻塞等待时间（负值表示无限制）
+          max-wait: -1ms
