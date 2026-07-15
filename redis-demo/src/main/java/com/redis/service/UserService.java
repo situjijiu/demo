@@ -7,7 +7,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.connection.RedisScriptingCommands;
+import org.springframework.data.redis.connection.RedisStreamCommands;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.RecordId;
+import org.springframework.data.redis.connection.stream.StreamRecords;
+import org.springframework.data.redis.connection.stream.StringRecord;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -29,6 +37,7 @@ public class UserService {
     private final Map<Long, User> userDatabase = new HashMap<>();
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 初始化模拟数据（Spring 依赖注入完成后自动执行）
@@ -51,6 +60,23 @@ public class UserService {
     @Cacheable(cacheNames = "user:", key = "#id", unless = "#result == null")
     public User getUserById(Long id) {
         log.info("从数据库查询用户，ID: {}", id);
+
+        StringRecord msg = StreamRecords
+                .string(Map.of("id", id.toString()))
+                .withStreamKey("test");
+
+        MapRecord<String, String, Long> data = StreamRecords.newRecord().in("test").ofMap(Map.of("id", id));
+        StreamRecords.newRecord().in("test").ofObject(Map.of("id", id));
+
+        RecordId recordId = redisTemplate.opsForStream().add(msg);
+        redisTemplate.opsForStream().add("test", Map.of("id", id));
+
+        RedisStreamCommands.XAddOptions xAddOptions = RedisStreamCommands
+                .XAddOptions
+                .maxlen(1000L)
+                .approximateTrimming(true);
+
+        log.info("消费ID：{}", recordId);
         return userDatabase.get(id);
     }
 
@@ -79,9 +105,8 @@ public class UserService {
     public void deleteUser(Long id) {
         log.info("删除用户，ID: {}", id);
         userDatabase.remove(id);
-        CompletableFuture.runAsync(() ->
-                redisTemplate.convertAndSend("cache:evict", "demo:user:" + id));
-        // redisTemplate.convertAndSend("cache:evict", "user:id");
+        // stringRedisTemplate.convertAndSend("cache:evict", "demo:user:" + id);
+        redisTemplate.convertAndSend("cache:evict", "user:id");
     }
 
     /**
@@ -91,5 +116,17 @@ public class UserService {
     @CacheEvict(cacheNames = "user:", allEntries = true)
     public void clearAllUserCache() {
         log.info("清除所有用户缓存");
+    }
+
+    public void testStream() {
+
+        for (int i = 0; i < 10000; i++) {
+            log.info("添加消息:{}", i);
+            redisTemplate.opsForStream().add(StreamRecords
+                    .newRecord()
+                    .in("test")
+                    .ofMap(Map.of("id", i))
+            );
+        }
     }
 }

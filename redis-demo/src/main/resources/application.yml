@@ -1,9 +1,4 @@
 spring:
-  # 缓存配置 - 用于防止缓存雪崩的随机 TTL
-  cache:
-    base-ttl-minutes: 10
-    max-random-delta-minutes: 5
-
   # Redis 配置
   data:
     redis:
@@ -12,7 +7,7 @@ spring:
       # Redis 服务器端口
       port: 6379
       # Redis 服务器密码（默认为空）
-      password: redis
+      password: 123456
       # 连接超时时间（毫秒）
       timeout: 3000ms
 

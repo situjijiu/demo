@@ -1,5 +1,7 @@
 package com.redis.config;
 
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 import cn.hutool.core.util.RandomUtil;
@@ -8,14 +10,19 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.redis.listener.CacheEvictListener;
+import com.redis.listener.TestStreamListener;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.stream.*;
+import org.springframework.data.redis.connection.stream.Record;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -23,6 +30,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Duration;
@@ -32,10 +40,12 @@ import java.time.Duration;
  * 配置 RedisTemplate 和 RedisCacheManager，统一序列化策略
  * 使用 Spring Data Redis 官方 TtlFunction 实现随机 TTL，防止缓存雪崩
  */
+@Slf4j
 @Configuration
 @EnableCaching
 @RequiredArgsConstructor
 public class RedisConfig {
+
 
     /**
      * 配置 RedisTemplate
@@ -93,8 +103,14 @@ public class RedisConfig {
 
     public final CacheEvictListener cacheEvictListener;
 
+    /**
+     * Redis pub/sub 监听器容器
+     *
+     * @param factory Redis配置工厂
+     * @return 发布订阅容器
+     */
     @Bean
-    public RedisMessageListenerContainer container(RedisConnectionFactory factory) {
+    public RedisMessageListenerContainer pubSubContainer(RedisConnectionFactory factory) {
 
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
@@ -108,6 +124,45 @@ public class RedisConfig {
         container.setTaskExecutor(executor);
 
         container.addMessageListener(cacheEvictListener, ChannelTopic.of("cache:evict"));
+        return container;
+    }
+
+
+    /**
+     * Redis Stream 监听器容器
+     *
+     * @param factory Redis配置工厂
+     * @return Stream容器
+     */
+    @Bean
+    public StreamMessageListenerContainer<String, MapRecord<String, String, String>> streamContainer(RedisConnectionFactory factory, RedisTemplate<String, Object> redisTemplate) {
+
+        // 使用底层原生 RedisConnection API 创建消费者组
+        // 与 opsForStream().createGroup() 相比，这种方式支持 MKSTREAM 选项
+        // 当 Stream 不存在时自动创建（避免手动预创建 Stream）
+        RedisConnection conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+        conn.streamCommands().xGroupCreate(
+                "test".getBytes(),        // Stream 名称
+                "test-group",              // 消费者组名称
+                ReadOffset.latest(),       // 从最新消息开始消费
+                true                       // MKSTREAM：Stream 不存在时自动创建
+        );
+
+        StreamMessageListenerContainer<String, MapRecord<String, String, String>> container =
+                StreamMessageListenerContainer.create(factory,
+                        StreamMessageListenerContainer
+                                .StreamMessageListenerContainerOptions.builder()
+                                .pollTimeout(Duration.ofMillis(1000))
+                                .batchSize(10)
+                                .build());
+
+        container.receiveAutoAck(
+                Consumer.from("test-group", "test-consumer"),
+                StreamOffset.create("test", ReadOffset.lastConsumed()),
+                new TestStreamListener()
+        );
+
+        container.start();
         return container;
     }
 }
