@@ -102,8 +102,5 @@ public class CFTest {
 
     @Test
     void test04() {
-        CompletableFuture<String> userFuture = CompletableFuture.supplyAsync(() -> "用户信息")
-                .thenApply(user -> user)
-                .thenCombine(CompletableFuture.supplyAsync(() -> "用户地址"), (u, order) -> u + order);
     }
 }

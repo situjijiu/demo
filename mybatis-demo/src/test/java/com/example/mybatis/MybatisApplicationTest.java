@@ -9,8 +9,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 /**
  * @author JJBond
  * @date 2025-11-01 20:27
@@ -24,13 +22,13 @@ class MybatisApplicationTest {
         Class<UserInfo> userInfoClass = UserInfo.class;
 
         Field userId = userInfoClass.getDeclaredField("userId");
-        Field[] fields = userInfoClass.getDeclaredFields();
+        // Field[] fields = userInfoClass.getDeclaredFields();
 
         log.info("userId: {}", userId.getName());
         log.info("type: {}", userId.getType());
 
         int modifiers = userId.getModifiers();
-        boolean aFinal = Modifier.isFinal(modifiers);
+        Modifier.isFinal(modifiers);
     }
 
     @Test

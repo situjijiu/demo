@@ -1,14 +1,11 @@
 package com.websocket.ws;
 
 
-import cn.hutool.core.util.StrUtil;
-
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 
 import cn.hutool.json.JSONUtil;
-import com.websocket.enums.Type;
 import com.websocket.model.ChatMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -51,7 +48,7 @@ public class ChatWebSocket {
 
         try {
             cn.hutool.json.JSONObject jsonObj = JSONUtil.parseObj(message);
-            String msgType = jsonObj.getStr("type");
+            jsonObj.getStr("type");
             String content = jsonObj.getStr("content");
 
             ChatMessage chatMessage = ChatMessage.builder()
@@ -83,30 +80,6 @@ public class ChatWebSocket {
     @OnError
     public void onError(Session session, Throwable error) {
         error.printStackTrace();
-    }
-
-    private static void broadcast(String msg) {
-        onlineSessions.forEach((username, onlineSession) -> {
-            if (onlineSession.isOpen()) {
-                onlineSession.getAsyncRemote().sendText(msg, result -> {
-                    if (!result.isOK()) {
-                        log.error("发送失败：{}", result.getException().getMessage());
-                    }
-                });
-            }
-        });
-    }
-
-    private static void broadcast(String msg, Session session) {
-        onlineSessions.forEach((username, onlineSession) -> {
-            if (onlineSession.isOpen() && !Objects.equals(onlineSession, session)) {
-                onlineSession.getAsyncRemote().sendText(msg, result -> {
-                    if (!result.isOK()) {
-                        log.error("发送失败：{}", result.getException().getMessage());
-                    }
-                });
-            }
-        });
     }
 
     private static void broadcast(Object message, Session session) {
