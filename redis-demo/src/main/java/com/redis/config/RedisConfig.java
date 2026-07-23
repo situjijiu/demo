@@ -130,13 +130,13 @@ public class RedisConfig {
 
     /**
      * 配置 Redis Stream 消费者组和监听器容器
-     *
+     * <p>
      * 使用 StreamMessageListenerContainer 实现 Stream 消息的自动消费。
      * 流程：
-     *   1. 使用 xGroupCreate + MKSTREAM 创建消费者组（Stream 不存在时自动创建）
-     *   2. 创建 StreamMessageListenerContainer，配置轮询超时和批处理大小
-     *   3. 注册 StreamListener 并指定消费者组和消费者名称
-     *   4. 启动容器，开始持续监听 Stream 消息
+     * 1. 使用 xGroupCreate + MKSTREAM 创建消费者组（Stream 不存在时自动创建）
+     * 2. 创建 StreamMessageListenerContainer，配置轮询超时和批处理大小
+     * 3. 注册 StreamListener 并指定消费者组和消费者名称
+     * 4. 启动容器，开始持续监听 Stream 消息
      *
      * @param factory       Redis 连接工厂
      * @param redisTemplate Redis 模板，用于获取原生连接创建消费者组
@@ -157,11 +157,18 @@ public class RedisConfig {
                 true                       // MKSTREAM：Stream 不存在时自动创建
         );
 
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("stream-listener-");
+        executor.initialize();
         // ========== 2. 构建监听器容器 ==========
         StreamMessageListenerContainer<String, MapRecord<String, String, String>> container =
                 StreamMessageListenerContainer.create(factory,
                         StreamMessageListenerContainer
                                 .StreamMessageListenerContainerOptions.builder()
+                                .executor(executor) // 配置自定义线程池
                                 .pollTimeout(Duration.ofMillis(1000))  // 轮询超时 1 秒，避免长阻塞
                                 .batchSize(10)                         // 每次拉取最多 10 条消息
                                 .build());
