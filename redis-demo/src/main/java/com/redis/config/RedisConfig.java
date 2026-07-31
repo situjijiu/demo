@@ -142,50 +142,50 @@ public class RedisConfig {
      * @param redisTemplate Redis 模板，用于获取原生连接创建消费者组
      * @return StreamMessageListenerContainer 容器实例
      */
-    @Bean
-    public StreamMessageListenerContainer<String, MapRecord<String, String, String>> streamContainer(RedisConnectionFactory factory, RedisTemplate<String, Object> redisTemplate) {
-
-        // ========== 1. 创建消费者组 ==========
-        // 使用底层原生 RedisConnection API 创建消费者组
-        // 与 opsForStream().createGroup() 相比，这种方式支持 MKSTREAM 选项
-        // 当 Stream 不存在时自动创建（避免手动预创建 Stream）
-        RedisConnection conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
-        conn.streamCommands().xGroupCreate(
-                "test".getBytes(),        // Stream 名称
-                "test-group",              // 消费者组名称
-                ReadOffset.latest(),       // 从最新消息开始消费
-                true                       // MKSTREAM：Stream 不存在时自动创建
-        );
-
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(4);
-        executor.setMaxPoolSize(8);
-        executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("stream-listener-");
-        executor.initialize();
-        // ========== 2. 构建监听器容器 ==========
-        StreamMessageListenerContainer<String, MapRecord<String, String, String>> container =
-                StreamMessageListenerContainer.create(factory,
-                        StreamMessageListenerContainer
-                                .StreamMessageListenerContainerOptions.builder()
-                                .executor(executor) // 配置自定义线程池
-                                .pollTimeout(Duration.ofMillis(1000))  // 轮询超时 1 秒，避免长阻塞
-                                .batchSize(10)                         // 每次拉取最多 10 条消息
-                                .build());
-
-        // ========== 3. 注册消费者 ==========
-        // receiveAutoAck：消费后自动确认（无需手动 ACK）
-        // Consumer.from(组名, 消费者名) —— 同一个组内多个消费者分摊消息
-        // StreamOffset.create(Stream名, ReadOffset.lastConsumed()) —— 从上次消费的位置继续
-        container.receiveAutoAck(
-                Consumer.from("test-group", "test-consumer"),
-                StreamOffset.create("test", ReadOffset.lastConsumed()),
-                new TestStreamListener()
-        );
-
-        // ========== 4. 启动容器 ==========
-        // 容器启动后，会在后台线程中持续监听 Stream 新消息
-        container.start();
-        return container;
-    }
+    // @Bean
+    // public StreamMessageListenerContainer<String, MapRecord<String, String, String>> streamContainer(RedisConnectionFactory factory, RedisTemplate<String, Object> redisTemplate) {
+    //
+    //     // ========== 1. 创建消费者组 ==========
+    //     // 使用底层原生 RedisConnection API 创建消费者组
+    //     // 与 opsForStream().createGroup() 相比，这种方式支持 MKSTREAM 选项
+    //     // 当 Stream 不存在时自动创建（避免手动预创建 Stream）
+    //     RedisConnection conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+    //     conn.streamCommands().xGroupCreate(
+    //             "test".getBytes(),        // Stream 名称
+    //             "test-group",              // 消费者组名称
+    //             ReadOffset.latest(),       // 从最新消息开始消费
+    //             true                       // MKSTREAM：Stream 不存在时自动创建
+    //     );
+    //
+    //     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    //     executor.setCorePoolSize(4);
+    //     executor.setMaxPoolSize(8);
+    //     executor.setQueueCapacity(100);
+    //     executor.setThreadNamePrefix("stream-listener-");
+    //     executor.initialize();
+    //     // ========== 2. 构建监听器容器 ==========
+    //     StreamMessageListenerContainer<String, MapRecord<String, String, String>> container =
+    //             StreamMessageListenerContainer.create(factory,
+    //                     StreamMessageListenerContainer
+    //                             .StreamMessageListenerContainerOptions.builder()
+    //                             .executor(executor) // 配置自定义线程池
+    //                             .pollTimeout(Duration.ofMillis(1000))  // 轮询超时 1 秒，避免长阻塞
+    //                             .batchSize(10)                         // 每次拉取最多 10 条消息
+    //                             .build());
+    //
+    //     // ========== 3. 注册消费者 ==========
+    //     // receiveAutoAck：消费后自动确认（无需手动 ACK）
+    //     // Consumer.from(组名, 消费者名) —— 同一个组内多个消费者分摊消息
+    //     // StreamOffset.create(Stream名, ReadOffset.lastConsumed()) —— 从上次消费的位置继续
+    //     container.receiveAutoAck(
+    //             Consumer.from("test-group", "test-consumer"),
+    //             StreamOffset.create("test", ReadOffset.lastConsumed()),
+    //             new TestStreamListener()
+    //     );
+    //
+    //     // ========== 4. 启动容器 ==========
+    //     // 容器启动后，会在后台线程中持续监听 Stream 新消息
+    //     container.start();
+    //     return container;
+    // }
 }
