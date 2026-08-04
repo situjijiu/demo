@@ -4,8 +4,8 @@ spring:
   application:
     name: mybatis-demo
   datasource:
-      url: jdbc:mysql://192.168.42.139:3306/dkd?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true&tinyInt1isBit=false
-      username: dkd
+      url: jdbc:mysql://192.168.42.139:3306/demo?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true&tinyInt1isBit=false
+      username: test_db
       password: 123456
       driver-class-name: com.mysql.cj.jdbc.Driver
 mybatis-plus:
