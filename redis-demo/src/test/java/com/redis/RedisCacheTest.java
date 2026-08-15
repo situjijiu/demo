@@ -1,13 +1,29 @@
 package com.redis;
 
+import cn.hutool.json.JSONUtil;
 import com.redis.model.User;
 import com.redis.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.domain.Range;
+import org.springframework.data.geo.Distance;
+import org.springframework.data.geo.Metric;
+import org.springframework.data.geo.Metrics;
+import org.springframework.data.geo.Point;
+import org.springframework.data.redis.connection.Limit;
+import org.springframework.data.redis.connection.RedisStreamCommands;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.ReadOffset;
+import org.springframework.data.redis.connection.stream.StreamReadOptions;
+import org.springframework.data.redis.connection.stream.StreamRecords;
+import org.springframework.data.redis.core.*;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -24,6 +40,91 @@ class RedisCacheTest {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    private StreamOperations<String, String, String> streamOps;
+    private BoundStreamOperations<String, Object, Object> boundStreamOps;
+
+    public static final String STREAM_KEY = "test:stream:simple";
+    public static final String GROUP_NAME = "group-simple";
+    public static final String CONSUMER_NAME = "consumer-01";
+
+    @BeforeEach
+    void setUp() {
+        streamOps = stringRedisTemplate.opsForStream();
+        // 先删除旧流，重置测试环境
+        // redisTemplate.delete(STREAM_KEY);
+        Long count = redisTemplate.countExistingKeys(List.of(STREAM_KEY));
+        if (count != 0L) {
+            boundStreamOps = stringRedisTemplate.boundStreamOps(STREAM_KEY);
+        }
+    }
+
+    /**
+     * 循环直接写入，不使用pipeline，测试用
+     */
+    @Test
+    void testStreamOperations() {
+
+        // List<MapRecord<String, Object, Object>> res = boundStreamOps.range(range, Limit.unlimited());
+        // Range<String> range = Range.closed("-", "+");
+        // for (MapRecord<String, Object, Object> re : Objects.requireNonNull(res)) {
+        //     System.out.println("消息ID：" + re.getId().getValue());
+        //     System.out.println("消息体：" + JSONUtil.toJsonPrettyStr(re.getValue()));
+        // }
+
+        List<MapRecord<String, Object, Object>> res = boundStreamOps.range(
+                Range.closed("-", "+"),
+                Limit.limit().count(100)
+        );
+        Objects.requireNonNull(res).forEach(re -> {
+            System.out.println("ID" + re.getId().getValue());
+            System.out.println("Body" + JSONUtil.toJsonPrettyStr(re.getValue()));
+        });
+
+        boundStreamOps.add(Map.of("uid", 13));
+        boundStreamOps.trim(100, true);
+
+    }
+
+    @Test
+    void testRead() {
+        // List<MapRecord<String, Object, Object>> res = boundStreamOps.read(
+        //         StreamReadOptions.empty().block(Duration.ofSeconds(50)),
+        //         ReadOffset.latest()
+        // );
+        List<MapRecord<String, Object, Object>> res = boundStreamOps.read(
+                StreamReadOptions.empty(),
+                ReadOffset.from("0")
+        );
+        Objects.requireNonNull(res).forEach(re -> {
+            System.out.println(re.getId().getValue());
+            System.out.println(JSONUtil.toJsonPrettyStr((re.getValue())));
+        });
+    }
+
+
+    @Test
+    void testGeoOptions() {
+        GeoOperations<String, String> ops = stringRedisTemplate.opsForGeo();
+        ops.add("cities", new Point(116.48, 39.96), "北京");
+        ops.add("cities", new Point(121.47, 31.23), "上海");
+        ops.add("cities", new Point(113.26, 23.13), "广州");
+
+        Distance distance = ops.distance("cities", "北京", "上海", Metrics.KILOMETERS);
+        System.out.println(Objects.requireNonNull(distance).getValue() + "(" + distance.getMetric().toString().toLowerCase() + ")");
+
+        log.info("===================================");
+
+
+    }
+
+    @Test
+    void testStringRedisAPI() {
+        Set<Object> keys = stringRedisTemplate.opsForHash().keys("12");
+    }
 
     /**
      * 测试 @Cacheable 注解：首次查询从数据库，后续从缓存
@@ -161,8 +262,8 @@ class RedisCacheTest {
 
         // 验证 TTL 在预期范围内（3-9分钟 = 180-540秒）
         for (int i = 0; i < ttls.length; i++) {
-            assert ttls[i] >= 180 && ttls[i] <= 540 : 
-                "TTL " + ttls[i] + " 超出预期范围 (180-540秒)";
+            assert ttls[i] >= 180 && ttls[i] <= 540 :
+                    "TTL " + ttls[i] + " 超出预期范围 (180-540秒)";
         }
 
         // 验证至少有两个不同的 TTL（证明随机性）

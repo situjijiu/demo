@@ -20,7 +20,7 @@ public class Java8Test {
      * - 按姓名长度排序,长度相同则按年龄排序
      */
     @Test
-    void test() {
+    void test() throws InterruptedException {
         // 模拟student集合
         List<Student> students = Arrays.asList(
                 new Student("张三", 18, 90d),
@@ -43,6 +43,7 @@ public class Java8Test {
         // log.info("=========");
 
         log.info("按姓名长度排序,长度相同则按年龄排序：");
+        TimeUnit.MINUTES.sleep(1);
         students.stream()
                 .sorted(Comparator.comparingInt((Student s) -> s.getName().length()).reversed()
                         .thenComparing(Student::getAge, Comparator.reverseOrder())
